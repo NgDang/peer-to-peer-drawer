@@ -10,17 +10,13 @@ import { registerApplication, start } from "single-spa";
 // });
 
 registerApplication({
-  name: '@root/demo',
-  app: () => System.import('@root/demo'),
-  activeWhen: (location) => location.pathname === '/',
+  name: "@root/demo",
+  app: () => System.import("@root/demo"),
+  activeWhen: (location) =>
+    location.pathname === "/" ||
+    location.pathname === "/room" ||
+    location.pathname === "/room/:id",
 });
-
-registerApplication({
-  name: '@root/share-screen',
-  app: () => System.import('@root/share-screen'),
-  activeWhen: (location) => location.pathname === '/',
-});
-
 
 start({
   urlRerouteOnly: true,

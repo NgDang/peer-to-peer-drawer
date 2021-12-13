@@ -4,11 +4,19 @@ const app = express();
 const server = http.createServer(app);
 const socket = require("socket.io");
 const io = socket(server);
+const cors = require("cors");
 
 const rooms = {};
 
+app.use(cors({
+	origin: "http://localhost:9000",
+}));
+
+app.use("/api/users", require("./api/users"));
+app.use("/api/room", require("./api/rooms"));
+
 io.on("connection", socket => {
-    socket.on("join room", roomID => {
+    socket.on("join-room", roomID => {
         if (rooms[roomID]) {
             rooms[roomID].push(socket.id);
         } else {
@@ -33,6 +41,5 @@ io.on("connection", socket => {
         io.to(incoming.target).emit("ice-candidate", incoming.candidate);
     });
 });
-
 
 server.listen(8000, () => console.log('server is running on port 8000'));
