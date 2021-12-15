@@ -6,7 +6,7 @@ import {
 } from 'react-router-dom';
 import { GlobalStyle } from './styles';
 import HomePage from './pages/Home'
-import RoomList from './pages/Room'
+import Room from './pages/Room'
 
 const App: FC = () => {
 	return (
@@ -16,7 +16,8 @@ const App: FC = () => {
 				<Router>
 					<Switch>
 						<Route exact path="/" component={HomePage} />
-						<Route exact path="/room" component={RoomList} />
+						<Route path="/room" component={Room} />
+						<Route path="/room/:id" component={Room} />
 					</Switch>
 				</Router>
 			</div>

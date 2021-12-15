@@ -12,10 +12,7 @@ import { registerApplication, start } from "single-spa";
 registerApplication({
   name: "@root/demo",
   app: () => System.import("@root/demo"),
-  activeWhen: (location) =>
-    location.pathname === "/" ||
-    location.pathname === "/room" ||
-    location.pathname === "/room/:id",
+  activeWhen: ["/room/:id", "/"],
 });
 
 start({

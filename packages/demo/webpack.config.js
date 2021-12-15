@@ -6,10 +6,12 @@ module.exports = (webpackConfigEnv, argv) => {
     orgName: "root",
     projectName: "demo",
     webpackConfigEnv,
-    argv,
+    argv
   });
 
   return merge(defaultConfig, {
-    // modify the webpack config however you'd like to by adding to this object
+		module: {
+			exprContextCritical: false
+		}
   });
 };

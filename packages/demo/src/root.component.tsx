@@ -1,4 +1,4 @@
 import App from './App'
-export default function Root(props) {
+export default function Root() {
 	return <App />;
 }
