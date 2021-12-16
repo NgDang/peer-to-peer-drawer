@@ -1,12 +1,9 @@
 import React, { FC } from 'react';
-import {
-	BrowserRouter as Router,
-	Route,
-	Switch
-} from 'react-router-dom';
+import { BrowserRouter as Router, Route, Switch } from 'react-router-dom';
 import { GlobalStyle } from './styles';
-import HomePage from './pages/Home'
-import Room from './pages/Room'
+import HomePage from './pages/Home';
+import Room from './pages/Room';
+import 'antd/dist/antd.css';
 
 const App: FC = () => {
 	return (
@@ -23,6 +20,6 @@ const App: FC = () => {
 			</div>
 		</>
 	);
-}
+};
 
 export default App;
