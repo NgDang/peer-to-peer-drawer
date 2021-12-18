@@ -42,7 +42,7 @@ class Room {
 		return this._drawingData
 	}
 
-	get info() {
+  get info() {
 		return {
 			id: this._id,
 			code: this._code,

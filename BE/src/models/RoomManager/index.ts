@@ -13,13 +13,12 @@ class RoomManager {
 
 	getRoomList(): RoomType[] {
 		const data: RoomType[] = [];
-		this.roomList.forEach((room: Room) => {
+    this.roomList.forEach((room: Room) => {
 			data.push(room.info)
 		})
 		return data
-	}
-
-	checkRoomExist(name: string): boolean {
+  }
+  checkRoomExist(name: string): boolean {
 		return this.roomList.some(room => room.name === name)
 	}
 
@@ -28,14 +27,15 @@ class RoomManager {
 	}
 
 	createRoom(name: string, userId: string) {
-		return new Promise<number | undefined>((resolve, reject) => {
-			const user = UserManager.getById(userId)
+		return new Promise<RoomType | undefined>((resolve, reject) => {
+      const user = UserManager.getById(userId);
+      
       if (user) {
 				const id = uuid();
 				const roomData : RoomType = {id, name, owner : user}
 				const room = new Room(roomData);
 				this.roomList.push(room)
-        resolve(room.code);
+        resolve(roomData);
       } else {
         reject();
       }

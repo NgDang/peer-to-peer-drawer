@@ -3,27 +3,27 @@ import RoomManager from "../models/RoomManager";
 import UserManager from "../models/UserManager";
 import { ERRORS } from "../constants/api";
 import { ApiRequest, ApiResponse } from "../types/api";
-import { ApiGetRoomsResponse, ApiCreateRoomBody, ApiCreateRoomSuccess, ApiJoinRoomBody, ApiJoinRoomSuccess, ApiLeaveRoomBody, ApiLeftRoomSuccess, ApiDrawingBody, ApiDrawingSuccess } from '../types/room'
+import { Room, ApiGetRoomsResponse, ApiCreateRoomBody, ApiCreateRoomSuccess, ApiJoinRoomBody, ApiJoinRoomSuccess, ApiLeaveRoomBody, ApiLeftRoomSuccess, ApiDrawingBody, ApiDrawingSuccess } from '../types/room'
 
 const router = Router();
 
 // Get all rooms 
 router.get('/', (
-	req: ApiRequest<any>,
-	res: ApiResponse<ApiGetRoomsResponse>
+  req: ApiRequest<any>,
+  res: ApiResponse<ApiGetRoomsResponse>
 ) => {
-	const roomList: ApiGetRoomsResponse = {
-		status: 'success',
-		data: {
-			roomList: RoomManager.getRoomList()
-		}
-	}
-	res.json(roomList);
+  const roomList: ApiGetRoomsResponse = {
+    status: 'success',
+    data: {
+      roomList: RoomManager.getRoomList()
+    }
+  }
+  res.json(roomList);
 })
 
 // Create Room
-router.post('/', (
-	req: ApiRequest<ApiCreateRoomBody>,
+router.post('/create', (
+  req: ApiRequest<ApiCreateRoomBody>,
   res: ApiResponse<ApiCreateRoomSuccess>
 ) => {
   const { name, userId } = req.body;
@@ -33,8 +33,8 @@ router.post('/', (
       error: ERRORS.EXISTS,
     });
   } else {
-    RoomManager.createRoom(name, userId).then((code: number | undefined) => {
-      const response: ApiCreateRoomSuccess = { status: 'success', data: { code } };
+    RoomManager.createRoom(name, userId).then((room: Room | undefined) => {
+      const response: ApiCreateRoomSuccess = { status: 'success', data: { room } };
       res.json(response);
     }).catch(error => {
       return res.status(400).json({
@@ -95,7 +95,7 @@ router.post('/leave/:roomId', (
   if (!UserManager.getById(userId)) {
     return res.status(400).json({
       status: 'error',
-			error: ERRORS.NOT_FOUND
+      error: ERRORS.NOT_FOUND
     })
   }
 
@@ -121,7 +121,7 @@ router.post('/leave/:roomId', (
 })
 
 router.post('/drawing/:roomId', (
-  req: ApiRequest<ApiDrawingBody, {roomId: string}>,
+  req: ApiRequest<ApiDrawingBody, { roomId: string }>,
   res: ApiResponse<ApiDrawingSuccess>,
 ) => {
   const { userId, drawingDataItem } = req.body;
@@ -130,19 +130,19 @@ router.post('/drawing/:roomId', (
   if (!UserManager.getById(userId)) {
     return res.status(400).json({
       status: 'error',
-			error: ERRORS.NOT_FOUND
+      error: ERRORS.NOT_FOUND
     })
   }
 
   const room = RoomManager.getRoom(roomId);
-	if (room) {
+  if (room) {
     RoomManager.drawing(roomId, userId, drawingDataItem!).then((drawingData) => {
       res.json({
         status: 'success',
-				data: {
-					userId,
-					drawingData
-				}
+        data: {
+          userId,
+          drawingData
+        }
       });
     }).catch(errCode => {
       return res.status(400).json({

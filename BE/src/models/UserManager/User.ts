@@ -3,7 +3,7 @@ import { User as UserType } from '../../types/user'
 class User {
 	private _id: string;	
 	private _name: string;
-	private _room: string;
+	private _room: string | undefined;
 
 	constructor(data : UserType) {
 		this._id = data?.id;
