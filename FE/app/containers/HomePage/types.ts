@@ -4,7 +4,7 @@ import * as actions from './redux/actions';
 /* --- STATE --- */
 
 interface HomeState {
-  readonly roomList: [];
+  readonly roomList: Array<any>;
 }
 
 /* --- ACTIONS --- */

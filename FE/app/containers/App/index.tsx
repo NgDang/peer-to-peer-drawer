@@ -13,6 +13,10 @@ import { Switch, Route } from 'react-router-dom';
 import { hot } from 'react-hot-loader/root';
 import { PATH } from 'navigate'
 
+import { useSelector } from 'react-redux';
+import { createStructuredSelector } from 'reselect';
+import { makeSelectCurrentUser } from 'containers/App/redux/selectors'
+
 import HomePage from 'containers/HomePage/Loadable';
 import RoomDetailPage from 'containers/RoomDetail/Loadable';
 import NotFoundPage from 'containers/NotFoundPage/Loadable';
@@ -32,7 +36,12 @@ const AppWrapper = styled.div`
   flex-direction: column;
 `;
 
+const stateSelector = createStructuredSelector({
+  currentUser: makeSelectCurrentUser(),
+});
+
 function App() {
+  const { currentUser } = useSelector(stateSelector);
   return (
     <AppWrapper>
       <Helmet
@@ -41,10 +50,10 @@ function App() {
       >
         <meta name="description" content="Drawing WebRTC" />
       </Helmet>
-      <Header />
+      <Header username={currentUser?.name} />
       <Switch>
         <Route exact path={PATH.HOME} component={HomePage} />
-        <Route path={PATH.ROOM_DETAIL} component={RoomDetailPage} />
+        <Route path={PATH.ROOM_DETAIL()} component={RoomDetailPage} />
         <Route component={NotFoundPage} />
       </Switch>
       {/* <Footer /> */}

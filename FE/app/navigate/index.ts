@@ -1,4 +1,4 @@
 export const PATH = {
   HOME: '/',
-  ROOM_DETAIL: '/room/:id',
+  ROOM_DETAIL: (id?: string) => `/room/${id || ':id'}`,
 };

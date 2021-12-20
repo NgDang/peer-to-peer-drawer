@@ -1,6 +1,8 @@
 export class ResponseError extends Error {
   public response: Response;
 
+  resJson: any;
+
   constructor(response: Response) {
     super(response.statusText);
     this.response = response;
@@ -27,13 +29,14 @@ function parseJSON(response: Response) {
  *
  * @return {object|undefined} Returns either the response, or throws an error
  */
-function checkStatus(response: Response) {
+async function checkStatus(response: Response) {
   if (response.status >= 200 && response.status < 300) {
     return response;
   }
 
   const error = new ResponseError(response);
   error.response = response;
+  error.resJson = await parseJSON(response);
   throw error;
 }
 

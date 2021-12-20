@@ -28,14 +28,14 @@ class UserManager {
 		return this.userList.some(user => user.name === name)
 	}
 
-	addUser(name: string): User | undefined {
+  addUser(name: string): UserType | undefined {
 		if (this.checkUserExist(name)) {
 			return undefined
 		}
 		const id = uuid();
 		const user = new User({id, name} as UserType)
 		this.userList.push(user)
-		return this.getById(id);
+		return user.info;
 	}
 }
 

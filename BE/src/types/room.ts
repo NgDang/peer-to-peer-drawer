@@ -1,6 +1,6 @@
 import UserModel from '../models/UserManager/User';
 import { ResponseSuccess } from './api'
-
+import { User as UserType } from './user'
 export interface User {
 	id: string,
 	name: string,
@@ -23,8 +23,8 @@ export interface Room {
 	id: string | undefined,
 	code?: number | undefined,
 	name: string | undefined,
-	owner: UserModel | undefined,
-	userList?: Array<UserModel> | undefined,
+	owner: UserType | undefined,
+	userList?: Array<UserType> | undefined,
 	drawingData?: Array<DrawingDataItem> | undefined
 }
 

@@ -1,12 +1,13 @@
 import { Room as RoomType, DrawingDataItem } from '../../types/room'
 import User from '../UserManager/User'
+import { User as UserType } from '../../types/user'
 
 class Room {
 	private _id: string | undefined;
 	private _code: number | undefined;
 	private _name: string | undefined;
-	private _owner: User | undefined;
-	private _userList: Array<User> | undefined;
+	private _owner: UserType | undefined;
+	private _userList: Array<UserType> | undefined;
 	private _drawingData: Array<DrawingDataItem> | undefined
 
 	constructor(data : RoomType) {
@@ -31,7 +32,7 @@ class Room {
 	}
 	
 	get owner() {
-    return this._owner?.info;
+    return this._owner;
 	}
 	
 	get userList() {
@@ -51,7 +52,7 @@ class Room {
 		}
 	}	
 
-	setUserList(data: Array<User> | undefined) {
+	setUserList(data: Array<UserType> | undefined) {
 		this._userList = data;
 	}
 

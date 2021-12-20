@@ -15,7 +15,7 @@ class RoomManager {
 		const data: RoomType[] = [];
     this.roomList.forEach((room: Room) => {
 			data.push(room.info)
-		})
+    })
 		return data
   }
   checkRoomExist(name: string): boolean {
@@ -32,7 +32,7 @@ class RoomManager {
       
       if (user) {
 				const id = uuid();
-				const roomData : RoomType = {id, name, owner : user}
+				const roomData : RoomType = {id, name, owner : user.info}
 				const room = new Room(roomData);
 				this.roomList.push(room)
         resolve(roomData);

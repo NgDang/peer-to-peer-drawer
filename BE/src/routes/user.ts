@@ -21,7 +21,7 @@ router.get('/:userId', (
 })
 
 // Create user
-router.post('/', (
+router.post('/create', (
   req: ApiRequest<RegisterUserBody>,
   res: ApiResponse<RegisterSuccess>
 ) => {

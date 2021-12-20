@@ -10,21 +10,23 @@ import { useDispatch, useSelector } from 'react-redux';
 import { createStructuredSelector } from 'reselect';
 import history from 'utils/history';
 import { PATH } from 'navigate'
-
 import saga from './redux/saga';
 import reducer from './redux/reducer';
 import { makeSelectRoomList } from './redux/selectors';
+import { makeSelectCurrentUser } from 'containers/App/redux/selectors'
 import { getAllRoomAsync, createRoomAsync } from './redux/actions'
+import { createUserAsync } from 'containers/App/redux/actions'
 import { useInjectReducer, useInjectSaga } from 'utils/redux-injectors';
-
 import { Input, Row, Col } from 'antd';
-import { UserOutlined } from '@ant-design/icons';
+import UserModal from 'components/UserModal'
+import RoomCard from './components/RoomCard'
 import { LeftSidebar, RightContent, Section, Flex, JoinButton, MetaCard } from './styles'
 
 const key = 'home';
 
 const stateSelector = createStructuredSelector({
   roomList: makeSelectRoomList(),
+  currentUser: makeSelectCurrentUser(),
 });
 
 
@@ -32,7 +34,7 @@ export default function HomePage() {
   useInjectReducer({ key: key, reducer: reducer });
   useInjectSaga({ key: key, saga: saga });
 
-  const { roomList } = useSelector(stateSelector);
+  const { roomList, currentUser } = useSelector(stateSelector);
 
   const dispatch = useDispatch();
   const [roomName, setRoomName] = useState('');
@@ -55,6 +57,18 @@ export default function HomePage() {
     setRoomName('')
   }
 
+
+  const handleCreateUser = (username: string) => {
+    const payload = {
+      name: username
+    }
+    dispatch(createUserAsync.request(payload))
+  }
+
+  const handleJoinRoom = (id: string) => {
+    history.push(PATH.ROOM_DETAIL(id))
+  }
+
   return (
     <>
       <Helmet>
@@ -68,9 +82,7 @@ export default function HomePage() {
         <LeftSidebar>
           <Flex>
             <Input
-              size="large"
               placeholder="Enter your room name"
-              prefix={<UserOutlined />}
               value={roomName}
               onChange={handleRoomName}
             />
@@ -82,11 +94,12 @@ export default function HomePage() {
         <RightContent>
           <Row gutter={[16, 16]}>
             {roomList.map((room, key) =>
-              <Col span={8}><MetaCard title={room.name} description={room.owner.name} /></Col>
+              <Col key={key} span={8}><RoomCard room={room} onJoinRoom={handleJoinRoom} /></Col>
             )}
           </Row>
         </RightContent>
       </Section>
+      <UserModal currentUser={currentUser} onCreate={handleCreateUser} />
     </>
   );
 }

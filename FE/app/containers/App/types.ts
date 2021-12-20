@@ -1,18 +1,15 @@
 import { ActionType } from 'typesafe-actions';
-import * as actions from './actions';
-import { Repo } from '../RepoListItem/types';
+import * as actions from './redux/actions';
 
 /* --- STATE --- */
 
-interface AppState {
-  readonly loading: boolean;
-  readonly error?: object | boolean;
-  readonly currentUser: string;
-  readonly userData: UserData;
-}
+type UserType = {
+  id: string;
+  name: string;
+};
 
-interface UserData {
-  readonly repos?: Repo[];
+interface AppState {
+  readonly currentUser: UserType;
 }
 
 /* --- ACTIONS --- */
@@ -23,4 +20,4 @@ type AppActions = ActionType<typeof actions>;
 type ContainerState = AppState;
 type ContainerActions = AppActions;
 
-export { ContainerState, ContainerActions, UserData };
+export { ContainerState, ContainerActions, UserType };

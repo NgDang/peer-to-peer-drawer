@@ -2,11 +2,15 @@ import * as React from 'react';
 
 import NavBar from './NavBar';
 
-function Header() {
+interface HeaderProps {
+  username: string
+}
+
+function Header(props: HeaderProps) {
   return (
     <div>
       <NavBar>
-        Welcome to Drawing Game
+        {` ${props?.username ? `Hello ${props.username}, ` : ''}Welcome to Drawing Game`}
       </NavBar>
     </div>
   );

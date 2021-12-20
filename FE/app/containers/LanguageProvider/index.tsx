@@ -11,7 +11,7 @@ import { useSelector } from 'react-redux';
 import { createSelector } from 'reselect';
 import { IntlProvider } from 'react-intl';
 
-import { makeSelectLocale } from './selectors';
+import { makeSelectLocale } from './redux/selectors';
 
 export interface Props {
   messages: { [locale: string]: { [id: string]: string } };
