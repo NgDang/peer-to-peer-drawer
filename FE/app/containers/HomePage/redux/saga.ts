@@ -3,7 +3,7 @@
  */
 
 import { put, takeLatest } from 'redux-saga/effects';
-import {getAllRoomAsync, createRoomAsync } from './actions'
+import {getAllRoomAsync, createRoomAsync, joinRoomAsync } from './actions'
 import { createUserAsync } from 'containers/App/redux/actions'
 import {openNotificationWithIcon} from 'utils/notification'
 
@@ -63,8 +63,30 @@ export function* createRoomSaga({ payload }) {
   }
 }
 
+export function* joinRoomSaga({ payload }) {
+
+  const {roomId, data, cb} = payload;
+
+  const restApiHost = API_ENDPOINTS.JOIN_ROOM(roomId);
+  try {
+    const res = yield request(`${restApiHost}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(data),
+    });
+    if (res?.status === 'success') {
+      cb(true)
+    }
+  } catch (err) {
+    cb(false)
+  }
+}
+
 export default function* mainSaga() {
   yield takeLatest(createUserAsync.request, createUserSaga);
   yield takeLatest(getAllRoomAsync.request, getAllRoomSaga);
   yield takeLatest(createRoomAsync.request, createRoomSaga);
+  yield takeLatest(joinRoomAsync.request, joinRoomSaga);
 }

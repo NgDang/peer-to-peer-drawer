@@ -2,37 +2,28 @@
  * Gets the repositories of the user from Github
  */
 
-import { call, put, select, takeLatest } from 'redux-saga/effects';
-import { reposLoaded, repoLoadingError } from 'containers/App/redux/actions';
-import ActionTypes from 'containers/App/redux/constants';
+import { put, takeLatest } from 'redux-saga/effects';
+import {getRoomAsync } from './actions'
+import {openNotificationWithIcon} from 'utils/notification'
 
 import request from 'utils/request';
-import { makeSelectUsername } from './selectors';
+import API_ENDPOINTS from 'utils/apiEndpoints';
 
-/**
- * Github repos request/response handler
- */
-export function* getRepos() {
-  // Select username from store
-  const username = yield select(makeSelectUsername());
-  const requestURL = `https://api.github.com/users/${username}/repos?type=all&sort=updated`;
 
+export function* getRoomSaga({ payload }) {
+  const {roomId } = payload
+  const restApiHost = API_ENDPOINTS.GET_ROOM(roomId);
   try {
-    // Call our request helper (see 'utils/request')
-    const repos = yield call(request, requestURL);
-    yield put(reposLoaded(repos, username));
+    const res = yield request(`${restApiHost}`);
+    console.log({data : res.data})
+    yield put(getRoomAsync.success(res.data));
   } catch (err) {
-    yield put(repoLoadingError(err));
+    const { status, error : { msg }} = err.resJson
+    openNotificationWithIcon(status, 'Error', msg)
+    yield put(getRoomAsync.failure(err));
   }
 }
 
-/**
- * Root saga manages watcher lifecycle
- */
-export default function* githubData() {
-  // Watches for LOAD_REPOS actions and calls getRepos when one comes in.
-  // By using `takeLatest` only the result of the latest API call is applied.
-  // It returns task descriptor (just like fork) so we can continue execution
-  // It will be cancelled automatically on component unmount
-  yield takeLatest(ActionTypes.LOAD_REPOS, getRepos);
+export default function* mainSaga() {
+  yield takeLatest(getRoomAsync.request, getRoomSaga);
 }

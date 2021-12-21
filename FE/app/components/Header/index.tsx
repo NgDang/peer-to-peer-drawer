@@ -1,5 +1,4 @@
 import * as React from 'react';
-
 import NavBar from './NavBar';
 
 interface HeaderProps {

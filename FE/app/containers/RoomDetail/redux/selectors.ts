@@ -6,9 +6,9 @@ import { createSelector } from 'reselect';
 import { ApplicationRootState } from 'types';
 import { initialState } from './reducer';
 
-const selectHome = (state: ApplicationRootState) => state.home || initialState;
+const selectHome = (state: ApplicationRootState) => state.roomDetail || initialState;
 
-const makeSelectUsername = () =>
-  createSelector(selectHome, substate => substate.username);
+const makeSelectUserListRoom = () =>
+  createSelector(selectHome, substate => substate.roomDetail.userList);
 
-export { selectHome, makeSelectUsername };
+export { selectHome, makeSelectUserListRoom };

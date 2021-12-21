@@ -31,6 +31,9 @@ export interface Room {
 export type ApiGetRoomsResponse = ResponseSuccess<{
   roomList: Room[],
 }>;
+export type ApiRoomResponse = ResponseSuccess<{
+  room: Room,
+}>;
 
 export interface ApiCreateRoomBody {
   name: string;

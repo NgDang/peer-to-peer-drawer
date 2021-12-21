@@ -3,7 +3,10 @@ import RoomManager from "../models/RoomManager";
 import UserManager from "../models/UserManager";
 import { ERRORS } from "../constants/api";
 import { ApiRequest, ApiResponse } from "../types/api";
-import { Room, ApiGetRoomsResponse, ApiCreateRoomBody, ApiCreateRoomSuccess, ApiJoinRoomBody, ApiJoinRoomSuccess, ApiLeaveRoomBody, ApiLeftRoomSuccess, ApiDrawingBody, ApiDrawingSuccess } from '../types/room'
+import { Room, ApiGetRoomsResponse, ApiRoomResponse, ApiCreateRoomBody, ApiCreateRoomSuccess, ApiJoinRoomBody, ApiJoinRoomSuccess, ApiLeaveRoomBody, ApiLeftRoomSuccess, ApiDrawingBody, ApiDrawingSuccess } from '../types/room'
+
+import MQTTService from '../models/MQTTSerivce'
+import { MQTT_TOPIC } from "../types/mqttSerivce";
 
 const router = Router();
 
@@ -21,6 +24,29 @@ router.get('/', (
   res.json(roomList);
 })
 
+// Get detail room 
+router.get('/:roomId', (
+  req: ApiRequest<any, { roomId: string }>,
+  res: ApiResponse<ApiRoomResponse>
+) => {
+  const { roomId } = req.params;
+  console.log(roomId)
+  const room = RoomManager.getRoom(roomId);
+  if (!room) {
+    return res.status(400).json({
+      status: 'error',
+      error: ERRORS.NOT_FOUND
+    });
+  }
+
+  return res.json({
+    status: 'success',
+    data: {
+      room: room.info,
+    }
+  })
+})
+
 // Create Room
 router.post('/create', (
   req: ApiRequest<ApiCreateRoomBody>,
@@ -36,6 +62,13 @@ router.post('/create', (
     RoomManager.createRoom(name, userId).then((room: Room | undefined) => {
       const response: ApiCreateRoomSuccess = { status: 'success', data: { room } };
       res.json(response);
+      MQTTService.pub(MQTT_TOPIC.RELOAD_ROOM, {
+        type: MQTT_TOPIC.RELOAD_ROOM,
+        payload: {
+          message: `${name} has created room.`,
+        }
+      });
+
     }).catch(error => {
       return res.status(400).json({
         status: 'error',
@@ -48,7 +81,7 @@ router.post('/create', (
 // User join room
 router.post('/join/:roomId', (
   req: ApiRequest<ApiJoinRoomBody, { roomId: string }>,
-  res: ApiResponse<ApiJoinRoomSuccess>,
+  res: ApiResponse<any>,
 ) => {
   const { code, userId } = req.body;
   const { roomId } = req.params;
@@ -67,15 +100,19 @@ router.post('/join/:roomId', (
       error: ERRORS.EXISTS
     });
   }
-  // Join room
+  // Join room, send all user in room
   RoomManager.joinRoom(userId, roomId, code).then(() => {
     const room = RoomManager.getRoom(roomId);
+    MQTTService.pub(MQTT_TOPIC.GET_USER_IN_ROOM, {
+      type: MQTT_TOPIC.GET_USER_IN_ROOM,
+      payload: {
+        message: `Someone has jointed room.`,
+        data: room?.userList
+      }
+    });
+
     return res.json({
       status: 'success',
-      data: {
-        userList: room ? room.userList : [],
-        drawingData: room ? room.drawingData : []
-      }
     })
   }).catch((errors) => {
     return res.status(400).json({

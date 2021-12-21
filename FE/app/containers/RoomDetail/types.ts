@@ -3,8 +3,18 @@ import * as actions from './redux/actions';
 
 /* --- STATE --- */
 
-interface HomeState {
-  readonly username: string;
+type User = {
+  id: string,
+  name: string,
+}
+interface CommonState {
+  readonly roomDetail: {
+    code: string,
+    id: string,
+    name: string,
+    owner:User,
+    userList: []
+  };
 }
 
 /* --- ACTIONS --- */
@@ -12,7 +22,7 @@ type AppActions = ActionType<typeof actions>;
 
 /* --- EXPORTS --- */
 
-type ContainerState = HomeState;
+type ContainerState = CommonState;
 type ContainerActions = AppActions;
 
 export { ContainerState, ContainerActions };

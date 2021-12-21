@@ -1,6 +1,9 @@
-import { action } from 'typesafe-actions';
+import { createAsyncAction } from 'typesafe-actions';
 
 import ActionTypes from './constants';
 
-export const changeUsername = (name: string) =>
-  action(ActionTypes.CHANGE_USERNAME, name);
+export const getRoomAsync = createAsyncAction(
+  `$${ActionTypes.GET_ROOM}_REQUEST`,
+  `$${ActionTypes.GET_ROOM}_SUCCESS`,
+  `$${ActionTypes.GET_ROOM}_FAILURE`,
+)<any, any, any>();

@@ -8,8 +8,7 @@ import { User as UserType } from '../../types/user'
 class UserManager {
 	private userList:  Array<User>
   constructor() {
-    const admin = new User({id : '1', name: 'admin'})
-		this.userList = [admin];
+		this.userList = [];
 	}
 
 	getUserList(): UserType[] {
@@ -21,7 +20,7 @@ class UserManager {
 	}
 
   getById(id: string): User | undefined {
-		return this.userList.find(user => user.id == id);
+    return this.userList.find(user => user.id.toString() == id.toString())
   }
 
 	checkUserExist(name: string): boolean {
@@ -34,7 +33,8 @@ class UserManager {
 		}
 		const id = uuid();
 		const user = new User({id, name} as UserType)
-		this.userList.push(user)
+    this.userList.push(user)
+    console.log(this.userList)
 		return user.info;
 	}
 }

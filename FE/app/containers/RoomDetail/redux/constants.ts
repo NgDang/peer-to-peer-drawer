@@ -10,7 +10,7 @@
  */
 
 enum ActionTypes {
-  CHANGE_USERNAME = 'boilerplate/Home/CHANGE_USERNAME',
+  GET_ROOM = 'boilerplate/Home/GET_ROOM',
 }
 
 export default ActionTypes;

@@ -5,8 +5,8 @@ import { ContainerState, ContainerActions } from '../types';
 // The initial state of the App
 export const initialState: ContainerState = {
   currentUser: {
-    id: '02984977-0df9-435d-b9f6-9b78081519a2',
-    name: 'dangdoan',
+    id: '',
+    name: '',
   },
 };
 

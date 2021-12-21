@@ -1,25 +1,28 @@
-import ActionTypes from './constants';
+import { createReducer } from 'typesafe-actions';
+import { getRoomAsync } from './actions';
 import { ContainerState, ContainerActions } from '../types';
 
 // The initial state of the App
 export const initialState: ContainerState = {
-  username: '',
+  roomDetail: {
+    code: '',
+    id: '',
+    name: '',
+    owner: {
+      id: '',
+      name: ''
+    },
+    userList: []
+  },
 };
 
-// Take this container's state (as a slice of root state), this container's actions and return new state
-function homeReducer(
-  state: ContainerState = initialState,
-  action: ContainerActions,
-): ContainerState {
-  switch (action.type) {
-    case ActionTypes.CHANGE_USERNAME:
-      return {
-        // Delete prefixed '@' from the github username
-        username: action.payload.replace(/@/gi, ''),
-      };
-    default:
-      return state;
-  }
-}
+const reducer = createReducer(initialState)
+  .handleAction(
+    getRoomAsync.success,
+    (state: ContainerState, action: ContainerActions) => ({
+      ...state,
+      roomDetail: action.payload.data.room,
+    }),
+  );
 
-export default homeReducer;
+export default reducer;

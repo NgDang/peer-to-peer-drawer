@@ -14,9 +14,11 @@ import saga from './redux/saga';
 import reducer from './redux/reducer';
 import { makeSelectRoomList } from './redux/selectors';
 import { makeSelectCurrentUser } from 'containers/App/redux/selectors'
-import { getAllRoomAsync, createRoomAsync } from './redux/actions'
+import { getAllRoomAsync, createRoomAsync, joinRoomAsync } from './redux/actions'
 import { createUserAsync } from 'containers/App/redux/actions'
 import { useInjectReducer, useInjectSaga } from 'utils/redux-injectors';
+import MQTTService from 'services/MQTTService'
+import { MQTT_TOPIC } from 'types/mqttService'
 import { Input, Row, Col } from 'antd';
 import UserModal from 'components/UserModal'
 import RoomCard from './components/RoomCard'
@@ -41,6 +43,14 @@ export default function HomePage() {
 
   useEffect(() => {
     dispatch(getAllRoomAsync.request());
+    Promise.all(MQTTService.sub([MQTT_TOPIC.RELOAD_ROOM])).then(() => {
+      MQTTService.handleTopic(MQTT_TOPIC.RELOAD_ROOM, () => {
+        dispatch(getAllRoomAsync.request());
+      });
+    });
+    return () => {
+      MQTTService.unSub(MQTT_TOPIC.RELOAD_ROOM);
+    }
   }, [])
 
   const handleRoomName = (e) => {
@@ -50,7 +60,7 @@ export default function HomePage() {
 
   const handleCreateRoom = () => {
     const payload = {
-      userId: '1',
+      userId: currentUser?.id,
       name: roomName
     }
     dispatch(createRoomAsync.request(payload));
@@ -65,8 +75,18 @@ export default function HomePage() {
     dispatch(createUserAsync.request(payload))
   }
 
-  const handleJoinRoom = (id: string) => {
-    history.push(PATH.ROOM_DETAIL(id))
+  const handleJoinRoom = (id: string, code: string) => {
+    const payload = {
+      roomId: id,
+      data: {
+        code,
+        userId: currentUser?.id
+      },
+      cb: (status) => {
+        status && history.push(PATH.ROOM_DETAIL(id))
+      }
+    }
+    dispatch(joinRoomAsync.request(payload));
   }
 
   return (

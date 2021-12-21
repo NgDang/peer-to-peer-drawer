@@ -1,6 +1,8 @@
 import { Room as RoomType, DrawingDataItem } from '../../types/room'
 import User from '../UserManager/User'
 import { User as UserType } from '../../types/user'
+import MQTTService from '../MQTTSerivce';
+import { MQTT_TOPIC } from '../../types/mqttSerivce'
 
 class Room {
 	private _id: string | undefined;
@@ -15,8 +17,19 @@ class Room {
 		this._code = Math.floor(1000 + Math.random() * 9000);
 		this._name = data?.name;
 		this._owner = data?.owner;
-		this._userList = data?.userList;
-		this._drawingData = data?.drawingData;
+		this._userList = data?.userList || [];
+    this._drawingData = data?.drawingData;
+    
+    Promise.all(MQTTService.sub([
+      MQTT_TOPIC.USER_SENDING_SIGNAL,
+      MQTT_TOPIC.USER_RETURNING_SIGNAL
+    ])).then(() => {
+      console.log('Room create success, subsribe to topics');
+      this.handleMessage();
+    }).catch(error => {
+      console.log('Something went wrong');
+    });
+
 	}
 
 	get id() {
@@ -48,7 +61,8 @@ class Room {
 			id: this._id,
 			code: this._code,
 			name: this._name,
-			owner: this._owner
+      owner: this._owner,
+      userList: this._userList
 		}
 	}	
 
@@ -66,7 +80,7 @@ class Room {
 			user.joinRoom(this.id);
 			const isExist : boolean = this.checkUserExist(user.id)
 			if (!isExist) {
-				this.userList?.push(user)
+				this.userList?.push(user.info)
 			}
 			return true;
 		} else {
@@ -93,7 +107,35 @@ class Room {
 		this._owner = undefined;
 		this._userList = undefined;
 		this._drawingData = undefined;
-	}
+  }
+  
+  handleMessage() {
+    MQTTService.handleTopic([
+      MQTT_TOPIC.USER_SENDING_SIGNAL,
+      MQTT_TOPIC.USER_RETURNING_SIGNAL,
+    ], (data: any, topic: string) => {
+      switch (topic) {
+        case MQTT_TOPIC.USER_SENDING_SIGNAL:
+          MQTTService.pub(MQTT_TOPIC.USER_JOIN, {
+            type: MQTT_TOPIC.USER_JOIN,
+            payload: {
+              message: `Someone has jointed room.`,
+              data
+            }
+          });
+          break;
+          case MQTT_TOPIC.USER_RETURNING_SIGNAL:
+            MQTTService.pub(MQTT_TOPIC.USER_RECEIVING_RETURNED_SIGNAL, {
+              type: MQTT_TOPIC.USER_JOIN,
+              payload: {
+                message: `Someone has jointed room.`,
+                data
+              }
+            });
+            break;
+      }
+    });
+  }
 
 }
 
