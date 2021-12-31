@@ -22,7 +22,7 @@ import { MQTT_TOPIC } from 'types/mqttService'
 import { Input, Row, Col } from 'antd';
 import UserModal from 'components/UserModal'
 import RoomCard from './components/RoomCard'
-import { LeftSidebar, RightContent, Section, Flex, JoinButton, MetaCard } from './styles'
+import { LeftSidebar, RightContent, Section, Flex, JoinButton } from './styles'
 
 const key = 'home';
 
@@ -89,6 +89,11 @@ export default function HomePage() {
     dispatch(joinRoomAsync.request(payload));
   }
 
+  const handleResetUser = () => {
+    localStorage.removeItem("user");
+    location.reload();
+  }
+
   return (
     <>
       <Helmet>
@@ -99,6 +104,7 @@ export default function HomePage() {
         />
       </Helmet>
       <Section>
+        {currentUser.id && <button onClick={handleResetUser} className='leaveBtn'>Logout</button>}
         <LeftSidebar>
           <Flex>
             <Input

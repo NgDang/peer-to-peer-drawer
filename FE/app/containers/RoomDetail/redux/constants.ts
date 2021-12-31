@@ -11,6 +11,8 @@
 
 enum ActionTypes {
   GET_ROOM = 'boilerplate/Home/GET_ROOM',
+  UPDATE_DRAWING_DATA = 'boilerplate/Home/UPDATE_DRAWING_DATA',
+  LEAVE_ROOM = 'boilerplate/Home/LEAVE_ROOM',
 }
 
 export default ActionTypes;

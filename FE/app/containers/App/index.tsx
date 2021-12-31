@@ -18,8 +18,8 @@ import { createStructuredSelector } from 'reselect';
 import { makeSelectCurrentUser } from 'containers/App/redux/selectors'
 
 import HomePage from 'containers/HomePage/Loadable';
-import RoomDetailPage from 'containers/RoomDetail/Loadable';
-import NotFoundPage from 'containers/NotFoundPage/Loadable';
+import RoomDetailPage from 'containers/RoomDetail';
+import NotFoundPage from 'containers/NotFoundPage';
 import Header from 'components/Header';
 // import Footer from 'components/Footer';
 
@@ -42,6 +42,11 @@ const stateSelector = createStructuredSelector({
 
 function App() {
   const { currentUser } = useSelector(stateSelector);
+
+  React.useEffect(() => {
+    localStorage.removeItem('user')
+  }, [])
+
   return (
     <AppWrapper>
       <Helmet
@@ -50,10 +55,11 @@ function App() {
       >
         <meta name="description" content="Drawing WebRTC" />
       </Helmet>
-      <Header username={currentUser?.name} />
+      <Header id={currentUser?.id} />
       <Switch>
         <Route exact path={PATH.HOME} component={HomePage} />
         <Route path={PATH.ROOM_DETAIL()} component={RoomDetailPage} />
+
         <Route component={NotFoundPage} />
       </Switch>
       {/* <Footer /> */}

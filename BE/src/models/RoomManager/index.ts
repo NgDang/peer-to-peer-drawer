@@ -74,13 +74,10 @@ class RoomManager {
       if (!room?.checkUserExist(userId)) {
         reject(ERRORS.NOT_FOUND);
       } else {
-        const user = UserManager.getById(userId);
-        user && room.updateDataDrawing(drawingDataItem);
+        room.updateDataDrawing(drawingDataItem);
         resolve(room.drawingData);
       }
     });
-	}
-
-	
+	}	
 }
 export default new RoomManager()

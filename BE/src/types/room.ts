@@ -16,7 +16,7 @@ export interface Point {
 export interface DrawingDataItem {
 	pointOne: Point,
 	pointTwo: Point,
-	user : User
+	userId : string
 }
 
 export interface Room {
@@ -26,6 +26,7 @@ export interface Room {
 	owner: UserType | undefined,
 	userList?: Array<UserType> | undefined,
 	drawingData?: Array<DrawingDataItem> | undefined
+	arrTopic?: Array<string> | undefined
 }
 
 export type ApiGetRoomsResponse = ResponseSuccess<{
@@ -50,8 +51,8 @@ export interface ApiLeaveRoomBody {
 }
 
 export interface ApiDrawingBody {
-	userId: string,
-	drawingDataItem?: DrawingDataItem
+  userId: string,
+	drawingDataItem: DrawingDataItem
 }
 
 export type ApiCreateRoomSuccess = ResponseSuccess<{ accessCode: number }>;

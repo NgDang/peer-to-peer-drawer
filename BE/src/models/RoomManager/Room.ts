@@ -3,14 +3,15 @@ import User from '../UserManager/User'
 import { User as UserType } from '../../types/user'
 import MQTTService from '../MQTTSerivce';
 import { MQTT_TOPIC } from '../../types/mqttSerivce'
-
+import {dynamicTopic} from '../../utils/common'
 class Room {
 	private _id: string | undefined;
 	private _code: number | undefined;
 	private _name: string | undefined;
 	private _owner: UserType | undefined;
 	private _userList: Array<UserType> | undefined;
-	private _drawingData: Array<DrawingDataItem> | undefined
+  private _drawingData: Array<DrawingDataItem> | undefined
+  private _arrTopic: Array<string>
 
 	constructor(data : RoomType) {
 		this._id = data?.id;
@@ -18,14 +19,16 @@ class Room {
 		this._name = data?.name;
 		this._owner = data?.owner;
 		this._userList = data?.userList || [];
-    this._drawingData = data?.drawingData;
+    this._drawingData = data?.drawingData || [];
+    this._arrTopic = [
+      dynamicTopic(MQTT_TOPIC.SEND_DRAWING, data?.id),
+      dynamicTopic(MQTT_TOPIC.USER_SENDING_SIGNAL, data?.id),
+      dynamicTopic(MQTT_TOPIC.USER_RETURNING_SIGNAL, data?.id),
+    ]
     
-    Promise.all(MQTTService.sub([
-      MQTT_TOPIC.USER_SENDING_SIGNAL,
-      MQTT_TOPIC.USER_RETURNING_SIGNAL
-    ])).then(() => {
+    Promise.all(MQTTService.sub(this._arrTopic)).then(() => {
       console.log('Room create success, subsribe to topics');
-      this.handleMessage();
+      this.handleRoomTopic();
     }).catch(error => {
       console.log('Something went wrong');
     });
@@ -62,12 +65,16 @@ class Room {
 			code: this._code,
 			name: this._name,
       owner: this._owner,
-      userList: this._userList
+      userList: this._userList,
+      drawingData: this._drawingData
 		}
 	}	
 
 	setUserList(data: Array<UserType> | undefined) {
 		this._userList = data;
+  }
+  setDrawingData(data: Array<DrawingDataItem> | undefined) {
+		this._drawingData = data;
 	}
 
 	checkUserExist(userId: string) : boolean {
@@ -91,13 +98,16 @@ class Room {
 	leave(user: User) {
     if (user) {
       user.leaveRoom();
-			const data = this.userList?.filter(item => item.id !== user.id)
+      const data = this.userList?.filter(item => item.id !== user.id)
+      if (data?.length === 0) {
+        this.setDrawingData([])
+      }
 			this.setUserList(data)
     }
 	}
 
 	updateDataDrawing(data : DrawingDataItem) {
-		this.drawingData?.push(data)
+    this.drawingData?.push(data)
 	}
 	
 	remove() {
@@ -109,31 +119,50 @@ class Room {
 		this._drawingData = undefined;
   }
   
-  handleMessage() {
-    MQTTService.handleTopic([
-      MQTT_TOPIC.USER_SENDING_SIGNAL,
-      MQTT_TOPIC.USER_RETURNING_SIGNAL,
-    ], (data: any, topic: string) => {
-      switch (topic) {
-        case MQTT_TOPIC.USER_SENDING_SIGNAL:
-          MQTTService.pub(MQTT_TOPIC.USER_JOIN, {
-            type: MQTT_TOPIC.USER_JOIN,
-            payload: {
-              message: `Someone has jointed room.`,
-              data
-            }
-          });
-          break;
-          case MQTT_TOPIC.USER_RETURNING_SIGNAL:
-            MQTTService.pub(MQTT_TOPIC.USER_RECEIVING_RETURNED_SIGNAL, {
-              type: MQTT_TOPIC.USER_JOIN,
-              payload: {
-                message: `Someone has jointed room.`,
-                data
-              }
-            });
-            break;
-      }
+  handleRoomTopic() {
+    MQTTService.handleTopic(this._arrTopic, (res: any, topic: string) => {
+      const { payload } = res
+      const roomId = payload.data?.roomId
+			switch (topic) {
+        case this._arrTopic[0]: {
+          this.updateDataDrawing(payload.data) 
+          const topic = dynamicTopic(MQTT_TOPIC.RECEIVE_DRAWING, this.id)
+					MQTTService.pub(topic, {
+						type: topic,
+						payload: {
+							message: `RECEIVE_DRAWING.`,
+               data: this.info,
+               callerId: this?.owner?.id
+						}
+					});
+					break;
+        }
+        case this._arrTopic[1]: {
+          const topic = dynamicTopic(MQTT_TOPIC.USER_JOIN, this.id, this?.owner?.id)
+						MQTTService.pub(topic, {
+							type: topic,
+							payload: {
+								message: `USER_JOIN.`,
+                 data: payload.data,
+                 callerId: this?.owner?.id
+							}
+						});
+					break;
+        }
+        case this._arrTopic[2]: {
+          const topic = dynamicTopic(MQTT_TOPIC.USER_RECEIVING_RETURNED_SIGNAL, this.id)
+						MQTTService.pub(topic, {
+							type: topic,
+							payload: {
+								message: `USER_RECEIVING_RETURNED_SIGNAL.`,
+                 data: payload.data,
+                 callerId: this?.owner?.id
+							}
+						});
+						break;
+          }
+				}
+				
     });
   }
 

@@ -6,6 +6,15 @@ export const Section = styled.div`
 	min-width: 100%;
 	color: black;
   display: flex;
+  .leaveBtn {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    border: none;
+    outline: 0;
+    min-width: 100px;
+    cursor: pointer;
+  }
 `;
 
 export const Flex = styled.div`

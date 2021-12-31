@@ -21,6 +21,8 @@ export function* createUserSaga({ payload }) {
       body: JSON.stringify(payload),
     });
     openNotificationWithIcon('success', 'Successfully')
+    const user = res.data.user
+    localStorage.setItem('user', JSON.stringify(user))
     yield put(createUserAsync.success(res.data));
   } catch (err) {
     const { status, error : { msg }} = err.resJson

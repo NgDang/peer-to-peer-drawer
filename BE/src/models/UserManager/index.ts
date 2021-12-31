@@ -1,10 +1,6 @@
 import { v4 as uuid } from "uuid";
 import User from './User';
 import { User as UserType } from '../../types/user'
-
-
-
-
 class UserManager {
 	private userList:  Array<User>
   constructor() {
@@ -34,7 +30,6 @@ class UserManager {
 		const id = uuid();
 		const user = new User({id, name} as UserType)
     this.userList.push(user)
-    console.log(this.userList)
 		return user.info;
 	}
 }

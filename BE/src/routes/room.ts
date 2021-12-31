@@ -3,6 +3,7 @@ import RoomManager from "../models/RoomManager";
 import UserManager from "../models/UserManager";
 import { ERRORS } from "../constants/api";
 import { ApiRequest, ApiResponse } from "../types/api";
+import {dynamicTopic} from '../utils/common'
 import { Room, ApiGetRoomsResponse, ApiRoomResponse, ApiCreateRoomBody, ApiCreateRoomSuccess, ApiJoinRoomBody, ApiJoinRoomSuccess, ApiLeaveRoomBody, ApiLeftRoomSuccess, ApiDrawingBody, ApiDrawingSuccess } from '../types/room'
 
 import MQTTService from '../models/MQTTSerivce'
@@ -30,7 +31,6 @@ router.get('/:roomId', (
   res: ApiResponse<ApiRoomResponse>
 ) => {
   const { roomId } = req.params;
-  console.log(roomId)
   const room = RoomManager.getRoom(roomId);
   if (!room) {
     return res.status(400).json({
@@ -38,7 +38,19 @@ router.get('/:roomId', (
       error: ERRORS.NOT_FOUND
     });
   }
-
+  
+  setTimeout(() => {
+    const topic = dynamicTopic(MQTT_TOPIC.GET_USER_IN_ROOM, roomId)
+      MQTTService.pub(topic, {
+        type: topic,
+        payload: {
+          message: `Someone has jointed room.`,
+          data: room?.userList || [],
+          callerId: room?.owner?.id
+        }
+      });
+    }, 1000)
+   
   return res.json({
     status: 'success',
     data: {
@@ -100,20 +112,19 @@ router.post('/join/:roomId', (
       error: ERRORS.EXISTS
     });
   }
-  // Join room, send all user in room
+  // Join room, send all user in roo
   RoomManager.joinRoom(userId, roomId, code).then(() => {
     const room = RoomManager.getRoom(roomId);
-    MQTTService.pub(MQTT_TOPIC.GET_USER_IN_ROOM, {
-      type: MQTT_TOPIC.GET_USER_IN_ROOM,
+    res.json({
+      status: 'success',
+    })
+    MQTTService.pub(MQTT_TOPIC.RELOAD_ROOM, {
+      type: MQTT_TOPIC.RELOAD_ROOM,
       payload: {
-        message: `Someone has jointed room.`,
-        data: room?.userList
+        message: `Join room`,
       }
     });
 
-    return res.json({
-      status: 'success',
-    })
   }).catch((errors) => {
     return res.status(400).json({
       status: "error",
@@ -141,8 +152,18 @@ router.post('/leave/:roomId', (
     RoomManager.leaveRoom(userId, roomId).then(() => {
       res.json({
         status: 'success',
-        data: null,
+        data: {
+          room: room.info,
+        }
       });
+      setTimeout(() => {
+        MQTTService.pub(MQTT_TOPIC.RELOAD_ROOM, {
+          type: MQTT_TOPIC.RELOAD_ROOM,
+          payload: {
+            message: `Leave room`,
+          }
+        });
+      }, 200)      
     }).catch(errCode => {
       return res.status(400).json({
         status: "error",
@@ -161,9 +182,9 @@ router.post('/drawing/:roomId', (
   req: ApiRequest<ApiDrawingBody, { roomId: string }>,
   res: ApiResponse<ApiDrawingSuccess>,
 ) => {
-  const { userId, drawingDataItem } = req.body;
+  const { drawingDataItem } = req.body;
   const { roomId } = req.params;
-
+  const userId = drawingDataItem?.userId || ''
   if (!UserManager.getById(userId)) {
     return res.status(400).json({
       status: 'error',
@@ -171,28 +192,20 @@ router.post('/drawing/:roomId', (
     })
   }
 
-  const room = RoomManager.getRoom(roomId);
-  if (room) {
-    RoomManager.drawing(roomId, userId, drawingDataItem!).then((drawingData) => {
-      res.json({
-        status: 'success',
-        data: {
-          userId,
-          drawingData
-        }
-      });
-    }).catch(errCode => {
-      return res.status(400).json({
-        status: "error",
-        error: ERRORS.BAD_REQUEST
-      })
+  RoomManager.drawing(roomId, userId, drawingDataItem).then((drawingData) => {
+    // console.log(drawingData)
+    res.json({
+      status: 'success',
+      data: {
+        drawingData
+      }
     });
-  } else {
+  }).catch(errCode => {
     return res.status(400).json({
       status: "error",
-      error: ERRORS.BAD_REQUEST,
+      error: ERRORS.BAD_REQUEST
     })
-  }
+  });
 })
 
 

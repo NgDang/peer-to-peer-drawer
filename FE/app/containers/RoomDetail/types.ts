@@ -7,13 +7,34 @@ type User = {
   id: string,
   name: string,
 }
+
+type Point = {
+  x: Number,
+  y: Number
+}
+
+interface RefVideo {
+  current: {
+    srcObject: MediaStream | null,
+    getTracks: () => void
+  }
+}
+
+interface DrawingDataItem {
+	pointOne: Point,
+	pointTwo: Point,
+	userId : string
+}
+
+
 interface CommonState {
   readonly roomDetail: {
     code: string,
     id: string,
     name: string,
     owner:User,
-    userList: []
+    userList: [],
+    drawingData?: Array<DrawingDataItem> | undefined
   };
 }
 
@@ -25,4 +46,4 @@ type AppActions = ActionType<typeof actions>;
 type ContainerState = CommonState;
 type ContainerActions = AppActions;
 
-export { ContainerState, ContainerActions };
+export { ContainerState, ContainerActions, RefVideo };

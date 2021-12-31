@@ -1,8 +1,7 @@
 import mqtt, { Client as MQTTClient } from 'mqtt';
-import { MQTTMessage } from 'types/mqttService'
+import { MQTTMessage } from 'types/mqttService';
 
-const HOST = 'ws://broker.emqx.io:8083/mqtt'
-
+const HOST = 'ws://broker.emqx.io:8083/mqtt';
 
 class MQTTService {
   private _client: MQTTClient;
@@ -23,7 +22,7 @@ class MQTTService {
         topic: 'WillMsg',
         payload: 'Connection Closed abnormally..!',
         qos: 0,
-        retain: false
+        retain: false,
       },
       rejectUnauthorized: false,
     });
@@ -31,57 +30,60 @@ class MQTTService {
 
   pub(topic: string, data: MQTTMessage): Promise<unknown> {
     return new Promise((resolve, reject) => {
+
       if (this._client) {
         const stringify = JSON.stringify({
           type: data.type,
-          payload: data.payload
+          payload: data.payload,
         });
-        this._client.publish(topic, stringify, { qos: 0 }, (error) => {
+        this._client.publish(topic, stringify, { qos: 0 }, error => {
           if (error) {
             reject(error);
           } else {
-            resolve(null);
+            resolve(true);
           }
         });
       } else {
         reject('Something when wrong');
       }
-    })
+    });
   }
 
   sub(topics: string[]): Promise<unknown>[] {
-    const promises = topics.map(topic => new Promise((resolve, reject) => {
-      if (this._client) {
-        console.log(topic);
-        this._client.subscribe(topic, { qos: 0 }, (error) => {
-          if (error) {
-            reject(error);
-          } else {
-            resolve(null);
+    const promises = topics.map(
+      topic =>
+        new Promise((resolve, reject) => {
+          if (this._client) {
+            this._client.subscribe(topic, { qos: 0 }, error => {
+              if (error) {
+                reject(error);
+              } else {
+                resolve(true);
+              }
+            });
           }
-        });
-      } else {
-        reject('Something when wrong');
-      }
-    }))
+        }),
+    );
     return promises;
   }
 
-  unSub(topics: string | string[]){
+  unSub(topics: string | string[]) {
     this._client.unsubscribe(topics);
   }
 
   handleTopic(topic: string | string[], callback: Function) {
     this._client.on('message', (msgTopic, payload) => {
-      const match = typeof topic === 'string' ? topic === msgTopic : topic.includes(msgTopic);
-      console.log(msgTopic, match);
+      const match =
+        typeof topic === 'string'
+          ? topic === msgTopic
+          : topic.includes(msgTopic);
       if (match) {
+        console.log(msgTopic);
         const data = JSON.parse(payload.toString());
         callback(data, msgTopic);
       }
-    })
+    });
   }
-
 }
 
 export default new MQTTService();

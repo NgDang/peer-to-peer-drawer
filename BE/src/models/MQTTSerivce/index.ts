@@ -38,7 +38,7 @@ class MQTTService {
           if (error) {
             reject(error);
           } else {
-            resolve(null);
+            resolve(true);
           }
         });
       } else {
@@ -54,7 +54,7 @@ class MQTTService {
           if (error) {
             reject(error);
           } else {
-            resolve(null);
+            resolve(true);
           }
         });
       } else {

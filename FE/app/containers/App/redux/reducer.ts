@@ -4,7 +4,7 @@ import { ContainerState, ContainerActions } from '../types';
 
 // The initial state of the App
 export const initialState: ContainerState = {
-  currentUser: {
+  currentUser: JSON.parse(localStorage.getItem('user')) || {
     id: '',
     name: '',
   },
