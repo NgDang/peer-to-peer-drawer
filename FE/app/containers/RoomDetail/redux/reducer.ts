@@ -3,6 +3,7 @@ import {
   getRoomAsync,
   leaveRoomAsync,
   updateDrawingDataAsync,
+  updateUserAcceptCalling,
 } from './actions';
 import { ContainerState, ContainerActions } from '../types';
 
@@ -36,6 +37,11 @@ const reducer = createReducer(initialState).handleAction(
   (state: ContainerState, action: ContainerActions) => ({
     ...state,
     drawingData: action.payload.drawingData,
+  }),
+  updateUserAcceptCalling.success,
+  (state: ContainerState, action: ContainerActions) => ({
+    ...state,
+    userList: action.payload.userList,
   }),
 );
 

@@ -38,18 +38,6 @@ router.get('/:roomId', (
       error: ERRORS.NOT_FOUND
     });
   }
-  
-  setTimeout(() => {
-    const topic = dynamicTopic(MQTT_TOPIC.GET_USER_IN_ROOM, roomId)
-      MQTTService.pub(topic, {
-        type: topic,
-        payload: {
-          message: `Someone has jointed room.`,
-          data: room?.userList || [],
-          callerId: room?.owner?.id
-        }
-      });
-    }, 1000)
    
   return res.json({
     status: 'success',
@@ -78,6 +66,7 @@ router.post('/create', (
         type: MQTT_TOPIC.RELOAD_ROOM,
         payload: {
           message: `${name} has created room.`,
+          userId
         }
       });
 
@@ -117,11 +106,21 @@ router.post('/join/:roomId', (
     const room = RoomManager.getRoom(roomId);
     res.json({
       status: 'success',
-    })
+		})
+		const topic = dynamicTopic(MQTT_TOPIC.GET_USER_IN_ROOM, roomId)
+		MQTTService.pub(topic, {
+			type: topic,
+			payload: {
+				message: `Someone has jointed room.`,
+				data: room?.userList || [],
+				roomOwnerId: room?.owner?.id
+			}
+		});
     MQTTService.pub(MQTT_TOPIC.RELOAD_ROOM, {
       type: MQTT_TOPIC.RELOAD_ROOM,
       payload: {
-        message: `Join room`,
+				message: `Join room`,
+				userId
       }
     });
 
@@ -131,6 +130,41 @@ router.post('/join/:roomId', (
       error: ERRORS.BAD_REQUEST,
     })
   });
+});
+
+// update user list
+router.post('/user-list/:roomId', (
+  req: ApiRequest<ApiJoinRoomBody, { roomId: string }>,
+  res: ApiResponse<any>,
+) => {
+  const { isCalled, userId } = req.body;
+  const { roomId } = req.params;
+
+  const room = RoomManager.getRoom(roomId);
+  if (!room) {
+    return res.status(400).json({
+      status: 'error',
+      error: ERRORS.NOT_FOUND
+    });
+  }
+
+  room.updateStatusCallingUserList(userId, isCalled, (data : any) => {
+    res.json({
+      status: 'success',
+      data: {
+        userList: data
+      }
+    })
+		const topic = dynamicTopic(MQTT_TOPIC.GET_USER_IN_ROOM, roomId)
+		MQTTService.pub(topic, {
+			type: topic,
+			payload: {
+				message: `Update user list.`,
+				data: data || [],
+				roomOwnerId: room?.owner?.id
+			}
+		});
+  })
 });
 
 router.post('/leave/:roomId', (
@@ -156,14 +190,22 @@ router.post('/leave/:roomId', (
           room: room.info,
         }
       });
-      setTimeout(() => {
-        MQTTService.pub(MQTT_TOPIC.RELOAD_ROOM, {
-          type: MQTT_TOPIC.RELOAD_ROOM,
-          payload: {
-            message: `Leave room`,
-          }
-        });
-      }, 200)      
+      MQTTService.pub(MQTT_TOPIC.RELOAD_ROOM, {
+				type: MQTT_TOPIC.RELOAD_ROOM,
+				payload: {
+					message: `Leave room`,
+					userId
+				}
+			});
+			const topic = dynamicTopic(MQTT_TOPIC.GET_USER_IN_ROOM, roomId)
+      MQTTService.pub(topic, {
+        type: topic,
+        payload: {
+          message: `Someone has jointed room.`,
+          data: room?.userList || [],
+          roomOwnerId: room?.owner?.id
+        }
+      });
     }).catch(errCode => {
       return res.status(400).json({
         status: "error",

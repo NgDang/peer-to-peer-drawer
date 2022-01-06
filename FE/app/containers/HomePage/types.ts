@@ -7,6 +7,20 @@ interface HomeState {
   readonly roomList: Array<any>;
 }
 
+interface RoomState {
+  userId: string;
+  name: string;
+}
+
+interface Error {
+  resJson: {
+    status: string,
+    error: {
+      msg : string
+    }
+  }
+}
+
 /* --- ACTIONS --- */
 type AppActions = ActionType<typeof actions>;
 
@@ -15,4 +29,5 @@ type AppActions = ActionType<typeof actions>;
 type ContainerState = HomeState;
 type ContainerActions = AppActions;
 
-export { ContainerState, ContainerActions };
+
+export { ContainerState, ContainerActions, RoomState, Error };

@@ -44,6 +44,7 @@ export interface ApiCreateRoomBody {
 export interface ApiJoinRoomBody {
 	code: number;
   userId: string;
+  isCalled?: boolean | undefined
 }
 
 export interface ApiLeaveRoomBody {

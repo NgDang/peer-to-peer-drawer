@@ -6,12 +6,12 @@ import { useDispatch, useSelector } from 'react-redux';
 import { createStructuredSelector } from 'reselect';
 import saga from './redux/saga';
 import reducer from './redux/reducer';
-import { getRoomAsync, leaveRoomAsync } from './redux/actions'
+import { getRoomAsync, leaveRoomAsync, updateUserAcceptCalling } from './redux/actions'
 import { useInjectReducer, useInjectSaga } from 'utils/redux-injectors';
 import { makeSelectCurrentUser } from 'containers/App/redux/selectors'
 import { makeSelectRoom } from './redux/selectors'
 
-import MQTTService from 'services/MQTTService'
+import useMQTTService from 'services/useMQTTService'
 import { MQTT_TOPIC } from 'types/mqttService'
 import Peer from "simple-peer";
 import { dynamicTopic } from 'utils/common'
@@ -21,139 +21,251 @@ import BoardGame from 'components/BoardGame'
 import { Container, BoardWrapper, RightWrapper } from './styles'
 import { RefVideo } from './types'
 import Paper from 'paper';
+import { Modal } from 'antd';
+import { Popover, Button } from 'antd';
 
 const CanvasId = 'canvas'
 const key = 'roomDetail'
 
+const CALLING_STATE = {
+  NONE: 'NONE',
+  CALLING: 'CALLING',
+  ACCEPT: 'ACCEPT',
+  CALLING_SUCCESS: 'CALLING_SUCCESS'
+}
+
 const stateSelector = createStructuredSelector({
   currentUser: makeSelectCurrentUser(),
-  roomDetail: makeSelectRoom()
+  roomDetail: makeSelectRoom(),
 });
 
 function RoomDetail(props) {
   useInjectReducer({ key: key, reducer: reducer });
   useInjectSaga({ key: key, saga: saga });
   const { currentUser, roomDetail } = useSelector(stateSelector);
+  const { mqttService, mqttData } = useMQTTService()
   const dispatch = useDispatch();
-
   const roomId = props.match.params.id;
 
-  const TOPICS = {
-    GET_USER_IN_ROOM: dynamicTopic(MQTT_TOPIC.GET_USER_IN_ROOM, roomId),
-    USER_JOIN: dynamicTopic(MQTT_TOPIC.USER_JOIN, roomId, currentUser?.id),
-    USER_RECEIVING_RETURNED_SIGNAL: dynamicTopic(MQTT_TOPIC.USER_RECEIVING_RETURNED_SIGNAL, roomId),
-    RECEIVE_DRAWING: dynamicTopic(MQTT_TOPIC.RECEIVE_DRAWING, roomId),
+  const [topics, _] = useState({
+    SEND_CALLING: dynamicTopic(MQTT_TOPIC.SEND_CALLING, roomId),
+    RECEIVE_CALLING: dynamicTopic(MQTT_TOPIC.RECEIVE_CALLING, roomId, currentUser?.id),
     SEND_DRAWING: dynamicTopic(MQTT_TOPIC.SEND_DRAWING, roomId),
+    RECEIVE_DRAWING: dynamicTopic(MQTT_TOPIC.RECEIVE_DRAWING, roomId),
+    GET_USER_IN_ROOM: dynamicTopic(MQTT_TOPIC.GET_USER_IN_ROOM, roomId),
+    USER_JOIN: dynamicTopic(MQTT_TOPIC.USER_JOIN, roomId),
     USER_SENDING_SIGNAL: dynamicTopic(MQTT_TOPIC.USER_SENDING_SIGNAL, roomId),
-    USER_RETURNING_SIGNAL: dynamicTopic(MQTT_TOPIC.USER_RETURNING_SIGNAL, roomId)
-  }
+    USER_RETURNING_SIGNAL: dynamicTopic(MQTT_TOPIC.USER_RETURNING_SIGNAL, roomId),
+    USER_RECEIVING_RETURNED_SIGNAL: dynamicTopic(MQTT_TOPIC.USER_RECEIVING_RETURNED_SIGNAL, roomId, currentUser?.id)
+  });
 
+  const localStreamRef = useRef<RefVideo>();
   const ownerVideoRef = useRef<RefVideo>();
   const peersRef = useRef([]);
-	const [peers, setPeers] = useState([]);
+  const [ownerId, setOwnerId] = useState(null);
+  const [userList, setUserList] = useState([]);
   const [dataDrawing, setDataDrawing] = useState([]);
-
+  const [isCalling, setIsCalling] = useState(CALLING_STATE.NONE);
 
   useEffect(() => {
-    getLocalStream();
     dispatch(getRoomAsync.request({ roomId }));
-    clientDrawing();
+    mqttService.sub([
+      topics.RECEIVE_CALLING,
+      topics.RECEIVE_DRAWING,
+      topics.GET_USER_IN_ROOM,
+      topics.USER_JOIN,
+      topics.USER_RECEIVING_RETURNED_SIGNAL
+    ])
+    navigator.mediaDevices.getUserMedia({
+      video: {
+        width: 120
+      }, audio: true
+    }).then((stream) => {
+      if (stream) {
+        localStreamRef.current = stream;
+        ownerVideoRef.current.srcObject = stream;
+      }
+    })
     window.onhashchange = function () {
       handleLeaveRoom();
+    }
+    return () => {
+      mqttService.unSub([
+        topics.RECEIVE_CALLING,
+        topics.RECEIVE_DRAWING,
+        topics.GET_USER_IN_ROOM,
+        topics.USER_JOIN,
+        topics.USER_RECEIVING_RETURNED_SIGNAL
+      ]);
     }
   }, [])
 
   useEffect(() => {
     if (roomDetail && roomDetail?.id) {
+      const roomOwnerId = roomDetail?.owner?.id
       const data = roomDetail?.drawingData || []
       if (data?.length > 0) {
         setDataDrawing(data)
       }
+      if (roomOwnerId && roomOwnerId === currentUser?.id) {
+        const usersInThisRoom = roomDetail.userList.filter(item => item?.id !== currentUser.id)
+        setUserList(usersInThisRoom)
+      }
+      setOwnerId(roomOwnerId)
       handleDrawing(data)
     }
   }, [roomDetail, roomDetail?.id])
 
-  const getLocalStream = async () => {
-    const stream: MediaStream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        width: 120
-      }, audio: true
-    })
-    if (stream) {
-      ownerVideoRef.current.srcObject = stream;
+  useEffect(() => {
+    if (isCalling === CALLING_STATE.ACCEPT && userList.length > 0) {
+      let newUserList = []
+      userList.forEach(user => {
+        if (user?.isCalled) {
+          const peer = createPeer(roomId, currentUser?.id, localStreamRef.current);
+          newUserList.push({
+            ...user,
+            isActive: false,
+            peer,
+          })
+        }
+      })
+      newUserList.length > 0 && setUserList(newUserList)
+      setIsCalling(CALLING_STATE.CALLING_SUCCESS);
+    }
+  }, [isCalling, userList])
 
-      const arrPromise = MQTTService.sub([
-        TOPICS.GET_USER_IN_ROOM,
-        TOPICS.USER_JOIN,
-        TOPICS.USER_RECEIVING_RETURNED_SIGNAL
-      ])
-      const statusGetUserInRoom = await arrPromise[0];
-      const statusGetUserJoin = await arrPromise[1];
-      const statusGetUserReceiving = await arrPromise[2];
-      const isSuccessSub = statusGetUserInRoom && statusGetUserJoin && statusGetUserReceiving
-      if (isSuccessSub) {
-        MQTTService.handleTopic([
-          TOPICS.GET_USER_IN_ROOM,
-          TOPICS.USER_JOIN,
-          TOPICS.USER_RECEIVING_RETURNED_SIGNAL
-        ], (res: any, topic: string) => {
-          const { payload: { data, callerId } } = res
-          console.log({ peersRef })
-          switch (topic) {
-            case TOPICS.GET_USER_IN_ROOM:
-              if (currentUser?.id !== callerId) {
-                const peersList = [];
-                const usersInThisRoom = data.filter(user => user.id !== currentUser?.id);
-                usersInThisRoom.forEach(user => {
-                  const peer = createPeer(roomId, user.id, stream);
-                  peersRef.current.push({
-                    peerID: user.id,
-                    peer,
-                  });
-                  peersList.push(peer);
-                })
-                peersList.length > 0 && setPeers(peersList);
-              }
-              break;
-            case TOPICS.USER_JOIN:
-              const peer = addPeer(roomId, data.signal, stream);
-              peersRef.current.push({
-                peerID: callerId,
-                peer,
-              })
-              setPeers(users => [...users, peer]);
-              break;
-            case TOPICS.USER_RECEIVING_RETURNED_SIGNAL:
-              if (currentUser?.id !== callerId) {
-                const item = peersRef.current.find(p => p.peerID === callerId && !item?.active);
-                if (item && !item?.active) {
-                  item.active = true;
-                  item?.peer.signal(data.signal);
-                }
-              }
 
-              break;
-          }
-        });
-      } else {
-        console.log('Subscribe room has error')
+  useEffect(() => {
+    if (mqttData?.type) {
+      const { type, payload } = mqttData
+      handleTopic(type, payload);
+    }
+  }, [mqttData, mqttData?.type])
+
+  const handleTopic = (topic, payload) => {
+    const { data, roomOwnerId } = payload
+    switch (topic) {
+      case topics.RECEIVE_CALLING: {
+        if (isCalling === CALLING_STATE.NONE) {
+          Modal.confirm({
+            title: 'You have an incoming call from the room owner?',
+            onOk() {
+              setIsCalling(CALLING_STATE.ACCEPT);
+              const payload = {
+                roomId,
+                userId: currentUser?.id,
+                isCalled: true
+              }
+              dispatch(updateUserAcceptCalling.request(payload))
+            },
+            onCancel() {
+              setIsCalling(CALLING_STATE.NONE);
+            },
+          });
+          setIsCalling(CALLING_STATE.CALLING);
+        }
+        break;
       }
+      case topics.RECEIVE_DRAWING: {
+        const { id, drawingData } = data
+        const lastUserId = drawingData?.[drawingData.length - 1]?.userId || ''
+        if (lastUserId !== currentUser?.id && id === roomId) {
+          setDataDrawing(drawingData)
+          handleDrawing(drawingData)
+        }
+        break;
+      }
+      case topics.GET_USER_IN_ROOM: {
+        const usersInThisRoom = data.filter(user => user.id !== currentUser?.id);
+        setUserList(usersInThisRoom);
+        break;
+      }
+      case topics.USER_JOIN: {
+        const userToSignal = userList.find(user => user.id === data.userToSignal);
+        if (userToSignal && !userToSignal?.isActive) {
+          const peer = addPeer(roomId, data.userToSignal, data.signal, localStreamRef.current);
+          const newUserList = userList.map(user => {
+            const result = {
+              ...user,
+              isActive: true
+            }
+            if (result.id === data.userToSignal) {
+              result.peer = peer;
+            }
+            return result
+          })
+          console.log({ newUserList })
+          newUserList.length > 0 && setUserList(newUserList)
+        }
+        break;
+      }
+      case topics.USER_RECEIVING_RETURNED_SIGNAL: {
+        if (currentUser?.id !== roomOwnerId && userList.length > 0) {
+          const newUserList = userList.map(user => {
+            if (!user.isActive) {
+              user.isActive = true
+              user?.peer.signal(data.signal);
+            }
+            return user
+          })
+          setUserList(newUserList)
+        }
+        break;
+      }
+      default:
+        break;
     }
   }
 
-  const clientDrawing = async () => {
-    const status = await MQTTService.sub([TOPICS.RECEIVE_DRAWING])
-    if (status) {
-      MQTTService.handleTopic(TOPICS.RECEIVE_DRAWING, (res) => {
-				const data = res?.payload?.data || []
-				const { id, drawingData } = data
-				const lastUserId = drawingData?.[drawingData.length - 1]?.userId || ''
-				if (lastUserId !== currentUser?.id && id === roomId) {
-					setDataDrawing(drawingData)
-					handleDrawing(drawingData)
+
+  const createPeer = (roomId, userToSignal, stream) => {
+    const peer = new Peer({
+      initiator: true,
+      trickle: false,
+      stream,
+    });
+    peer.on("signal", signal => {
+      mqttService.pub(topics.USER_SENDING_SIGNAL, {
+        type: topics.USER_SENDING_SIGNAL,
+        payload: {
+          message: `USER_SENDING_SIGNAL.`,
+          data: { userToSignal, signal, roomId }
         }
       });
-    }
+    })
+    return peer;
+  }
+
+  const addPeer = (roomId, userToSignal, incomingSignal, stream) => {
+    const peer = new Peer({
+      initiator: false,
+      trickle: false,
+      stream,
+    })
+
+    peer.on("signal", signal => {
+      mqttService.pub(topics.USER_RETURNING_SIGNAL, {
+        type: topics.USER_RETURNING_SIGNAL,
+        payload: {
+          message: `USER_RETURNING_SIGNAL.`,
+          data: { userToSignal, signal, roomId }
+        }
+      });
+    })
+    peer.signal(incomingSignal);
+    return peer;
+  }
+
+  const handleCallGuest = (guestId) => {
+    mqttService.pub(topics.SEND_CALLING, {
+      type: topics.SEND_CALLING,
+      payload: {
+        message: `The owner room is calling me.`,
+        data: {
+          guestId: guestId
+        }
+      }
+    });
   }
 
   const handleUpdateDrawingData = (data: any) => {
@@ -166,8 +278,8 @@ function RoomDetail(props) {
     newDataDrawing.push(payload)
     setDataDrawing(newDataDrawing)
     handleDrawing(newDataDrawing)
-    MQTTService.pub(TOPICS.SEND_DRAWING, {
-      type: TOPICS.SEND_DRAWING,
+    mqttService.pub(topics.SEND_DRAWING, {
+      type: topics.SEND_DRAWING,
       payload: {
         message: `Someone drawn.`,
         data: payload
@@ -193,72 +305,47 @@ function RoomDetail(props) {
     (Paper as any).view.draw();
   }
 
-	function createPeer(roomId , userToSignal, stream) {
-		const peer = new Peer({
-			initiator: true,
-			trickle: false,
-			stream,
-		});
-		peer.on("signal", signal => {
-      MQTTService.pub(TOPICS.USER_SENDING_SIGNAL, {
-        type: TOPICS.USER_SENDING_SIGNAL,
-				payload: {
-					message: `USER_SENDING_SIGNAL.`,
-					data: { userToSignal, signal, roomId }
-				}
-			});
-		})
-		return peer;
-	}
-
-  function addPeer(roomId, incomingSignal, stream) {
-		const peer = new Peer({
-			initiator: false,
-			trickle: false,
-			stream,
-		})
-
-		peer.on("signal", signal => {
-      MQTTService.pub(TOPICS.USER_RETURNING_SIGNAL, {
-        type: TOPICS.USER_RETURNING_SIGNAL,
-				payload: {
-					message: `USER_RETURNING_SIGNAL.`,
-					data: { signal, roomId }
-				}
-			});
-		})
-		peer.signal(incomingSignal);
-		return peer;
-	}
-
   const handleLeaveRoom = () => {
     peersRef.current = new Array()
-    MQTTService.unSub(TOPICS.USER_JOIN);
-    MQTTService.unSub(TOPICS.USER_RECEIVING_RETURNED_SIGNAL);
-    MQTTService.unSub(TOPICS.GET_USER_IN_ROOM);
     ownerVideoRef?.current?.srcObject?.getTracks().forEach(track => track.stop())
     ownerVideoRef?.current?.srcObject = null
     const payload = {
       roomId,
-      userId: currentUser?.id
+      userId: currentUser?.id,
+      cb: (status) => {
+        status && history.push({
+          pathname: PATH.HOME
+        })
+      }
     }
     dispatch(leaveRoomAsync.request(payload))
-    history.push({
-      pathname: PATH.HOME
-    })
   }
+
+  const HowToPlayContent = (
+    <div>
+      <p>Please type the keyboard letter <b>w, a, d, s</b> to play game together.</p>
+    </div>
+  );
 
   return (
     <Container>
       <button onClick={handleLeaveRoom} className='leaveBtn'>Leave</button>
       <BoardWrapper>
         <BoardGame id={CanvasId} dataDrawing={dataDrawing} onUpdateDrawingData={handleUpdateDrawingData} />
-
       </BoardWrapper>
       <RightWrapper>
-        <video ref={ownerVideoRef} muted playsInline autoPlay></video>
-				{peers.map((peer, index) => (
-					<VideoRoom key={index} peer={peer} />
+        <Popover className="btn-note" placement="topRight" title="How to play?" content={HowToPlayContent} trigger="hover">
+          <Button>How to play?</Button>
+        </Popover>
+        <video className='owner' ref={ownerVideoRef} muted playsInline autoPlay></video>
+        {userList.map((user, index) => (
+          <VideoRoom
+            key={index}
+            user={user}
+            ownerId={ownerId}
+            currentUserId={currentUser?.id}
+            onCallGuest={handleCallGuest}
+          />
 				))}
       </RightWrapper>
     </Container>

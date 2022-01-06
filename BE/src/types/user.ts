@@ -3,7 +3,8 @@ import { ResponseSuccess } from './api'
 export interface User {
 	id: string,
 	name: string,
-	room?: string | undefined
+  room?: string | undefined
+  isCalled?: boolean | undefined
 }
 
 export interface RegisterUserBody {

@@ -10,9 +10,10 @@
  */
 
 enum ActionTypes {
-  GET_ROOM = 'boilerplate/Home/GET_ROOM',
-  UPDATE_DRAWING_DATA = 'boilerplate/Home/UPDATE_DRAWING_DATA',
-  LEAVE_ROOM = 'boilerplate/Home/LEAVE_ROOM',
+  GET_ROOM = 'boilerplate/roomDetail/GET_ROOM',
+  UPDATE_DRAWING_DATA = 'boilerplate/roomDetail/UPDATE_DRAWING_DATA',
+  LEAVE_ROOM = 'boilerplate/roomDetail/LEAVE_ROOM',
+  USER_ACCEPT_CALL = 'boilerplate/roomDetail/USER_ACCEPT_CALL',
 }
 
 export default ActionTypes;

@@ -5,7 +5,7 @@
 import { put, takeLatest } from 'redux-saga/effects';
 import {getAllRoomAsync, createRoomAsync, joinRoomAsync } from './actions'
 import { createUserAsync } from 'containers/App/redux/actions'
-import {openNotificationWithIcon} from 'utils/notification'
+import { openNotificationWithIcon } from 'utils/notification'
 
 import request from 'utils/request';
 import API_ENDPOINTS from 'utils/apiEndpoints';

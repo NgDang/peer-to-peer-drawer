@@ -3,7 +3,7 @@
  */
 
 import { put, takeLatest } from 'redux-saga/effects';
-import { getRoomAsync, leaveRoomAsync, updateDrawingDataAsync } from './actions'
+import { getRoomAsync, leaveRoomAsync, updateDrawingDataAsync, updateUserAcceptCalling } from './actions'
 import {openNotificationWithIcon} from 'utils/notification'
 
 import request from 'utils/request';
@@ -24,7 +24,7 @@ export function* getRoomSaga({ payload }) {
 }
 
 export function* leaveRoomSaga({ payload }) {
-  const { roomId, userId } = payload
+  const { roomId, userId, cb } = payload
   const restApiHost = API_ENDPOINTS.LEAVE_ROOM(roomId);
   try {
     const res = yield request(`${restApiHost}`, {
@@ -34,10 +34,12 @@ export function* leaveRoomSaga({ payload }) {
       },
       body: JSON.stringify({userId}),
     });
+    cb && cb(true)
     yield put(leaveRoomAsync.success(res.data));
   } catch (err) {
     const { status, error : { msg }} = err.resJson
     openNotificationWithIcon(status, 'Error', msg)
+    cb && cb(false)
     yield put(leaveRoomAsync.failure(err));
   }
 }
@@ -66,8 +68,33 @@ export function* updateDrawingDataSaga({ payload }) {
   }
 }
 
+export function* updateUserAcceptCallingSaga({ payload }) {
+  const { roomId, userId, isCalled } = payload
+  const dataUpdate = {
+    userId,
+    isCalled
+  }
+  const restApiHost = API_ENDPOINTS.UPDATE_USER_LIST(roomId);
+  try {
+    const res = yield request(`${restApiHost}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({...dataUpdate}),
+    });
+    const userList = res?.data?.userList || []
+    yield put(updateUserAcceptCalling.success(userList));
+  } catch (err) {
+    const { status, error : { msg }} = err.resJson
+    openNotificationWithIcon(status, 'Error', msg)
+    yield put(updateUserAcceptCalling.failure(err));
+  }
+}
+
 export default function* mainSaga() {
   yield takeLatest(getRoomAsync.request, getRoomSaga);
   yield takeLatest(leaveRoomAsync.request, leaveRoomSaga);
   yield takeLatest(updateDrawingDataAsync.request, updateDrawingDataSaga);
+  yield takeLatest(updateUserAcceptCalling.request, updateUserAcceptCallingSaga);
 }

@@ -19,3 +19,9 @@ export const updateDrawingDataAsync = createAsyncAction(
   `$${ActionTypes.UPDATE_DRAWING_DATA}_SUCCESS`,
   `$${ActionTypes.UPDATE_DRAWING_DATA}_FAILURE`,
 )<any, any, any>();
+
+export const updateUserAcceptCalling = createAsyncAction(
+  `$${ActionTypes.USER_ACCEPT_CALL}_REQUEST`,
+  `$${ActionTypes.USER_ACCEPT_CALL}_SUCCESS`,
+  `$${ActionTypes.USER_ACCEPT_CALL}_FAILURE`,
+)<any, any, any>();

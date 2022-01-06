@@ -55,7 +55,7 @@ function App() {
       >
         <meta name="description" content="Drawing WebRTC" />
       </Helmet>
-      <Header id={currentUser?.id} />
+      <Header name={currentUser?.name} />
       <Switch>
         <Route exact path={PATH.HOME} component={HomePage} />
         <Route path={PATH.ROOM_DETAIL()} component={RoomDetailPage} />

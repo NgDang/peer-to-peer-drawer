@@ -17,7 +17,8 @@ import { makeSelectCurrentUser } from 'containers/App/redux/selectors'
 import { getAllRoomAsync, createRoomAsync, joinRoomAsync } from './redux/actions'
 import { createUserAsync } from 'containers/App/redux/actions'
 import { useInjectReducer, useInjectSaga } from 'utils/redux-injectors';
-import MQTTService from 'services/MQTTService'
+
+import useMQTTService from 'services/useMQTTService'
 import { MQTT_TOPIC } from 'types/mqttService'
 import { Input, Row, Col } from 'antd';
 import UserModal from 'components/UserModal'
@@ -37,21 +38,29 @@ export default function HomePage() {
   useInjectSaga({ key: key, saga: saga });
 
   const { roomList, currentUser } = useSelector(stateSelector);
-
+  const { mqttService, mqttData } = useMQTTService()
   const dispatch = useDispatch();
   const [roomName, setRoomName] = useState('');
 
   useEffect(() => {
-    dispatch(getAllRoomAsync.request());
-    Promise.all(MQTTService.sub([MQTT_TOPIC.RELOAD_ROOM])).then(() => {
-      MQTTService.handleTopic(MQTT_TOPIC.RELOAD_ROOM, () => {
-        dispatch(getAllRoomAsync.request());
-      });
-    });
-    return () => {
-      MQTTService.unSub(MQTT_TOPIC.RELOAD_ROOM);
+    if (currentUser?.id) {
+      dispatch(getAllRoomAsync.request());
+      mqttService.sub(MQTT_TOPIC.RELOAD_ROOM)
     }
-  }, [])
+    return () => {
+      mqttService.unSub(MQTT_TOPIC.RELOAD_ROOM);
+    }
+  }, [currentUser?.id])
+
+  useEffect(() => {
+    if (mqttData?.type) {
+      const { payload: { message, userId } } = mqttData
+      if (userId !== currentUser?.id) {
+        dispatch(getAllRoomAsync.request());
+      }
+    }
+  }, [mqttData, mqttData?.type])
+
 
   const handleRoomName = (e) => {
     e.preventDefault();
